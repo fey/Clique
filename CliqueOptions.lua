@@ -127,20 +127,32 @@ function Clique.ListScrollUpdate()
 end
 
 function Clique.SortFunc(a,b)
-    -- Calculate modifier score
-    -- The more modifiers you have, the higher your score
-    
-    if a.name == b.name then
-        if a.rank and b.rank then
-            return a.rank < b.rank
-        elseif a.action and b.action then 
-            return a.action < b.action
-        else 
-            return a.modifiers < b.modifiers
-        end
-    else
+    -- Must be a strict total order, otherwise Lua's (unstable) table.sort
+    -- reshuffles "equal" entries on every list rebuild.
+
+    if a.name ~= b.name then
         return a.name < b.name
     end
+    -- Same name: order by rank; a ranked entry sorts before a "Max" (no rank) one.
+    if a.rank ~= b.rank then
+        if a.rank and b.rank then
+            return a.rank < b.rank
+        end
+        return a.rank ~= nil
+    end
+    -- Same name and rank: custom-script action, then modifiers.
+    if a.action ~= b.action then
+        if a.action and b.action then
+            return a.action < b.action
+        end
+        return a.action ~= nil
+    end
+    if a.modifiers ~= b.modifiers then
+        return a.modifiers < b.modifiers
+    end
+    -- Final tiebreaker: (button, modifiers) is unique per entry, so this
+    -- guarantees a strict total order and a stable, repeatable sort.
+    return a.button < b.button
 end
 
 function Clique:SortList()
